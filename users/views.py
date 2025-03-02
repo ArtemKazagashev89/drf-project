@@ -1,9 +1,11 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets
+from rest_framework import viewsets, generics
+from rest_framework.permissions import IsAuthenticated
 
-from users.serializers import PaymentSerializer
+from materials.models import Payment
+from users.serializers import PaymentSerializer, UserCreateSerializer, UserSerializer
 
-from .models import Payment
+from .models import User
 
 
 class PaymentViewSet(viewsets.ModelViewSet):
@@ -16,3 +18,37 @@ class PaymentViewSet(viewsets.ModelViewSet):
         "paid_lesson": ["exact"],
         "payment_method": ["exact"],
     }
+
+
+class UserCreateView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserCreateSerializer
+
+
+class UserListView(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class UserUpdateView(generics.UpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+
+class UserDeleteView(generics.DestroyAPIView):
+    queryset = User.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
