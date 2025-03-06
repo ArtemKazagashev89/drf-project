@@ -19,7 +19,7 @@ class Lesson(models.Model):
     title = models.CharField(max_length=50, verbose_name="Название")
     description = models.TextField(verbose_name="Описание")
     preview = models.ImageField(upload_to="lessons/previews", blank=True, null=True)
-    video_link = models.URLField()
+    video_link = models.URLField(blank=True, null=True)
     course = models.ForeignKey(Course, related_name="lessons", on_delete=models.CASCADE, blank=True, null=True)
 
     owner = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
@@ -45,3 +45,14 @@ class Payment(models.Model):
     class Meta:
         verbose_name = "Платеж"
         verbose_name_plural = "Платежи"
+
+
+class Subscription(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, verbose_name="Курс")
+    is_subscribe = models.BooleanField(default=False, verbose_name="Подписка")
+
+    class Meta:
+        verbose_name = "Подписка"
+        verbose_name_plural = "Подписки"
+        unique_together = ("user", "course")
