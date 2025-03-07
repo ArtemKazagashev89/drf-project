@@ -5,8 +5,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.permissions import IsModer, IsOwner
-from .models import Course, Lesson, Subscription
+from .models import Course, Lesson, Subscription, Payment
 from .serializers import CourseSerializer, LessonSerializer
+from .stripe_service import create_product, create_price, create_checkout_session
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -83,3 +84,21 @@ class SubscriptionAPIView(APIView):
             message = "Подписка удалена"
 
         return Response({"message": message})
+
+
+class CheckoutSessionAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        product = create_product("Test Product")
+        price = create_price(product.id, 1000)
+        session = create_checkout_session(price.id)
+
+        payment = Payment.objects.create(
+            user=request.user,
+            amount=10.00,
+            payment_method='stripe',
+            session_id=session.id
+        )
+
+        return Response({"checkout_url": session.url}, status=200)
