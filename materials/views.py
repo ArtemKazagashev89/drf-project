@@ -18,14 +18,11 @@ class CourseViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         course = serializer.save(owner=self.request.user)
 
-        # Создаем продукт в Stripe
         product = create_product(course.title)
 
-        # Создаем цену для этого продукта
-        price_amount = 10000  # Укажите цену в копейках
+        price_amount = 10000
         price = create_price(product.id, price_amount)
 
-        # Сохраняем идентификаторы Stripe в модели Course
         course.stripe_product_id = product.id
         course.stripe_price_id = price.id
         course.save()
@@ -105,10 +102,9 @@ class CheckoutSessionAPIView(APIView):
         course_id = request.data.get("course_id")
         course = get_object_or_404(Course, id=course_id)
 
-        # Отладочное сообщение
-        print(f"Course ID: {course.id}, Price ID: {course.stripe_price_id}")
 
-        # Убедитесь, что stripe_price_id существует
+       # print(f"Course ID: {course.id}, Price ID: {course.stripe_price_id}")
+
         if not course.stripe_price_id:
             return Response({"error": "Цена для курса не найдена."}, status=404)
 
