@@ -10,6 +10,11 @@ class Course(models.Model):
 
     owner = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
 
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена", default=1000)
+
+    stripe_product_id = models.CharField(max_length=255, blank=True, null=True)
+    stripe_price_id = models.CharField(max_length=255, blank=True, null=True)
+
     class Meta:
         verbose_name = "Курс"
         verbose_name_plural = "Курсы"

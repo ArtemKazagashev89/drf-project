@@ -16,9 +16,21 @@ class CourseViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
-        course = serializer.save()
-        course.owner = self.request.user
+        course = serializer.save(owner=self.request.user)
+
+        # Создаем продукт в Stripe
+        product = create_product(course.title)
+
+        # Создаем цену для этого продукта
+        price_amount = 10000  # Укажите цену в копейках
+        price = create_price(product.id, price_amount)
+
+        # Сохраняем идентификаторы Stripe в модели Course
+        course.stripe_product_id = product.id
+        course.stripe_price_id = price.id
         course.save()
+
+        return Response({'message': 'Курс создан и продукт в Stripe создан!'}, status=201)
 
     def get_permissions(self):
         if self.action == "create":
@@ -90,14 +102,22 @@ class CheckoutSessionAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        product = create_product("Test Product")
-        price = create_price(product.id, 1000)
-        session = create_checkout_session(price.id)
+        course_id = request.data.get("course_id")
+        course = get_object_or_404(Course, id=course_id)
+
+        # Отладочное сообщение
+        print(f"Course ID: {course.id}, Price ID: {course.stripe_price_id}")
+
+        # Убедитесь, что stripe_price_id существует
+        if not course.stripe_price_id:
+            return Response({"error": "Цена для курса не найдена."}, status=404)
+
+        session = create_checkout_session(course.stripe_price_id)
 
         payment = Payment.objects.create(
             user=request.user,
-            amount=10.00,
-            payment_method='stripe',
+            paid_course=course,
+            amount=course.price,
             session_id=session.id
         )
 
