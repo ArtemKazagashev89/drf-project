@@ -9,7 +9,7 @@ from materials.views import (
     LessonListApiView,
     LessonRetrieveApiView,
     LessonUpdateApiView,
-    SubscriptionAPIView, CheckoutSessionAPIView,
+    SubscriptionAPIView, CheckoutSessionAPIView, PaymentStatusAPIView,
 )
 from users.views import PaymentViewSet
 
@@ -26,5 +26,6 @@ urlpatterns = [
     path("lesson/update/<int:pk>/", LessonUpdateApiView.as_view(), name="lesson-update"),
     path("lesson/delete/<int:pk>/", LessonDestroyApiView.as_view(), name="lesson-delete"),
     path("subscriptions/", SubscriptionAPIView.as_view(), name="subscription"),
-    path('checkout-session/', CheckoutSessionAPIView.as_view(), name='checkout-session')
+    path('checkout-session/', CheckoutSessionAPIView.as_view(), name='checkout-session'),
+    path('payment-status/<str:session_id>/', PaymentStatusAPIView.as_view(), name='payment-status'),
 ] + router.urls
