@@ -1,33 +1,19 @@
 from rest_framework import generics, viewsets
-from rest_framework.generics import get_object_or_404
+from rest_framework.generics import get_object_or_404, CreateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.permissions import IsModer, IsOwner
 from .models import Course, Lesson, Subscription, Payment
-from .serializers import CourseSerializer, LessonSerializer
-from .stripe_service import create_product, create_price, create_checkout_session, retrieve_session
+from .serializers import CourseSerializer, LessonSerializer, PaymentSerializer
+from .stripe_service import create_stripe_session
 
 
 class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
     permission_classes = [IsAuthenticated]
-
-    def perform_create(self, serializer):
-        course = serializer.save(owner=self.request.user)
-
-        product = create_product(course.title)
-
-        price_amount = 10000
-        price = create_price(product.id, price_amount)
-
-        course.stripe_product_id = product.id
-        course.stripe_price_id = price.id
-        course.save()
-
-        return Response({'message': 'Курс создан и продукт в Stripe создан!'}, status=201)
 
     def get_permissions(self):
         if self.action == "create":
@@ -95,40 +81,17 @@ class SubscriptionAPIView(APIView):
         return Response({"message": message})
 
 
-class CheckoutSessionAPIView(APIView):
+class CheckoutSessionAPIView(CreateAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = PaymentSerializer
+    queryset = Payment.objects.all()
 
-    def post(self, request):
-        course_id = request.data.get("course_id")
-        course = get_object_or_404(Course, id=course_id)
-
-        if not course.stripe_price_id:
-
-            product = create_product(course.title)
-            price = create_price(product.id, int(course.price * 100))
-
-            course.stripe_product_id = product.id
-            course.stripe_price_id = price.id
-            course.save()
-
-        session = create_checkout_session(course.stripe_price_id)
-
-        payment = Payment.objects.create(
-            user=request.user,
-            paid_course=course,
-            amount=course.price,
-            payment_method='stripe',
-            session_id=session.id
-        )
-
-        return Response({"checkout_url": session.url}, status=200)
+    def perform_create(self, serializer):
+        payment = serializer.save(user=self.request.user)
+        price = payment.amount
+        session_id, payment_link = create_stripe_session(price)
+        payment.session_id = session_id
+        payment.link = payment_link
+        payment.save()
 
 
-class PaymentStatusAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, session_id):
-
-        session = retrieve_session(session_id)
-
-        return Response({"status": session.status}, status=200)
