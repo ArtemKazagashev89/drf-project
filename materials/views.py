@@ -1,13 +1,13 @@
-from rest_framework import generics, viewsets
-from rest_framework.generics import get_object_or_404, CreateAPIView
+from rest_framework import generics, viewsets, status
+from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.permissions import IsModer, IsOwner
 from .models import Course, Lesson, Subscription, Payment
-from .serializers import CourseSerializer, LessonSerializer, PaymentSerializer
-from .stripe_service import create_stripe_session
+from .serializers import CourseSerializer, LessonSerializer
+from .stripe_service import create_stripe_session, create_stripe_price
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -81,17 +81,32 @@ class SubscriptionAPIView(APIView):
         return Response({"message": message})
 
 
-class CheckoutSessionAPIView(CreateAPIView):
+class CheckoutSessionAPIView(APIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = PaymentSerializer
-    queryset = Payment.objects.all()
 
-    def perform_create(self, serializer):
-        payment = serializer.save(user=self.request.user)
-        price = payment.amount
-        session_id, payment_link = create_stripe_session(price)
-        payment.session_id = session_id
-        payment.link = payment_link
-        payment.save()
+    def post(self, request):
+        amount = request.data.get("amount")
 
+        if amount is None or amount <= 0:
+            return Response({"error": "Укажите корректную сумму."}, status=status.HTTP_400_BAD_REQUEST)
+
+        course = Course.objects.first()
+
+        if not course:
+            return Response({"error": "Курс не найден."}, status=status.HTTP_404_NOT_FOUND)
+
+        price = create_stripe_price(course.price)
+
+        session_id, payment_link = create_stripe_session(price.id)
+
+        payment = Payment.objects.create(
+            user=request.user,
+            paid_course=course,
+            amount=course.price,
+            payment_method='stripe',
+            session_id=session_id,
+            link=payment_link
+        )
+
+        return Response({"checkout_url": payment_link}, status=status.HTTP_201_CREATED)
 

@@ -7,6 +7,7 @@ class Course(models.Model):
     title = models.CharField(max_length=50, verbose_name="Название")
     preview = models.ImageField(upload_to="courses/previews", blank=True, null=True)
     description = models.TextField(verbose_name="Описание", blank=True, null=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена", default=1000)
 
     owner = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
 
@@ -30,6 +31,11 @@ class Lesson(models.Model):
 
 
 class Payment(models.Model):
+    PAYMENT_METHOD_CHOICES = [
+        ("cash", "Наличные"),
+        ("transfer", "Перевод на счет"),
+        ("stripe", "Stripe"),
+    ]
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     payment_date = models.DateTimeField(auto_now_add=True)
@@ -37,7 +43,7 @@ class Payment(models.Model):
     paid_lesson = models.ForeignKey(Lesson, null=True, blank=True, on_delete=models.CASCADE)
     amount = models.PositiveIntegerField(verbose_name="Сумма")
     session_id = models.CharField(max_length=255, blank=True, null=True)
-
+    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES, null=True, blank=True,)
     link = models.URLField(max_length=400, verbose_name="Ссылка на оплату", blank=True, null=True)
 
     class Meta:
