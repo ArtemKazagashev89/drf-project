@@ -85,28 +85,23 @@ class CheckoutSessionAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        amount = request.data.get("amount")
+        course_id = request.data.get("course_id")
+        course = get_object_or_404(Course, id=course_id)
 
-        if amount is None or amount <= 0:
-            return Response({"error": "Укажите корректную сумму."}, status=status.HTTP_400_BAD_REQUEST)
+        if not course.stripe_price_id:
+            price = create_stripe_price(course.price)
+            course.stripe_price_id = price.id
+            course.save()
 
-        course = Course.objects.first()
-
-        if not course:
-            return Response({"error": "Курс не найден."}, status=status.HTTP_404_NOT_FOUND)
-
-        price = create_stripe_price(course.price)
-
-        session_id, payment_link = create_stripe_session(price.id)
+        session_id, payment_link = create_stripe_session(course.stripe_price_id)
 
         payment = Payment.objects.create(
             user=request.user,
             paid_course=course,
             amount=course.price,
-            payment_method='stripe',
+            payment_method="stripe",
             session_id=session_id,
-            link=payment_link
+            link=payment_link,
         )
 
         return Response({"checkout_url": payment_link}, status=status.HTTP_201_CREATED)
-

@@ -11,6 +11,9 @@ class Course(models.Model):
 
     owner = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
 
+    stripe_product_id = models.CharField(max_length=255, blank=True, null=True)
+    stripe_price_id = models.CharField(max_length=255, blank=True, null=True)
+
     class Meta:
         verbose_name = "Курс"
         verbose_name_plural = "Курсы"
@@ -43,7 +46,12 @@ class Payment(models.Model):
     paid_lesson = models.ForeignKey(Lesson, null=True, blank=True, on_delete=models.CASCADE)
     amount = models.PositiveIntegerField(verbose_name="Сумма")
     session_id = models.CharField(max_length=255, blank=True, null=True)
-    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES, null=True, blank=True,)
+    payment_method = models.CharField(
+        max_length=10,
+        choices=PAYMENT_METHOD_CHOICES,
+        null=True,
+        blank=True,
+    )
     link = models.URLField(max_length=400, verbose_name="Ссылка на оплату", blank=True, null=True)
 
     class Meta:
