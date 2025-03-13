@@ -24,6 +24,11 @@ class CourseViewSet(viewsets.ModelViewSet):
             self.permission_classes = (IsModer | IsOwner,)
         return super().get_permissions()
 
+    def perform_update(self, serializer, send_course_update_email=None):
+        course = serializer.save()
+
+        send_course_update_email.delay(course.id)
+
 
 class LessonCreateApiView(generics.CreateAPIView):
     queryset = Lesson.objects.all()
