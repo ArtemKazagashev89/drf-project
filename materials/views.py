@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from users.permissions import IsModer, IsOwner
 from .models import Course, Lesson, Subscription, Payment
 from .serializers import CourseSerializer, LessonSerializer
-from .stripe_service import create_stripe_session, create_stripe_price
+from .stripe_service import create_stripe_session, create_stripe_price, create_product
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -88,8 +88,11 @@ class CheckoutSessionAPIView(APIView):
         course_id = request.data.get("course_id")
         course = get_object_or_404(Course, id=course_id)
 
-        if not course.stripe_price_id:
+        if not course.stripe_product_id or not course.stripe_price_id:
+            product = create_product(course.title)
             price = create_stripe_price(course.price)
+
+            course.stripe_product_id = product.id
             course.stripe_price_id = price.id
             course.save()
 
@@ -99,9 +102,9 @@ class CheckoutSessionAPIView(APIView):
             user=request.user,
             paid_course=course,
             amount=course.price,
-            payment_method="stripe",
+            payment_method='stripe',
             session_id=session_id,
-            link=payment_link,
+            link=payment_link
         )
 
         return Response({"checkout_url": payment_link}, status=status.HTTP_201_CREATED)
