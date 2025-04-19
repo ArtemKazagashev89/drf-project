@@ -13,9 +13,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
+      - db
+      - redis
     env_file:
       - ./.env
 
@@ -37,13 +36,17 @@ services:
     env_file:
       - ./.env
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U your_user"]
+      test: ["CMD-SHELL", "pg_isready -U tema"]
       interval: 30s
       timeout: 10s
       retries: 5
 
   redis:
-    image: redis:alpine
+    image: redis:7
+    volumes:
+      - redis_data:/data
+    env_file:
+      - ./.env
 
   celery:
     build: .
@@ -55,5 +58,6 @@ services:
 volumes:
   postgres_data:
   static_volume:
+  redis_data:
 
 
